@@ -7,6 +7,7 @@ import { createInput } from "./game/input.js";
 import { loadTMX } from "./game/tmx.js";
 import { buildLevelFromTMX } from "./game/level.js";
 import { createContactSystem } from "./game/contacts.js";
+import { getLevelConfig, computeScore, computeRating } from "./game/scoring.js";
 
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
@@ -24,6 +25,8 @@ let levelIndex = 0;
 // Runtime state
 let mode = "loading"; // "loading" | "playing" | "paused" | "won"
 let runTimeMs = 0;
+let winResult = null; // { score, rating, starsScore, timeBonus, maxScore, ... }
+let winComputed = false;
 let tmxInfo = "TMX: not loaded";
 
 // World/session state (se recrea al cargar nivel)
@@ -81,6 +84,8 @@ async function loadLevel(index) {
   levelIndex = Math.max(0, Math.min(index, LEVELS.length - 1));
   mode = "loading";
   runTimeMs = 0;
+  winResult = null;
+  winComputed = false;
   tmxInfo = "TMX: loading…";
 
   createSession();
@@ -146,18 +151,68 @@ function update(dt) {
     if (contacts.won) {
       mode = "won";
     }
+
+    // If we just won, compute final scoring once
+    if (mode === "won" && !winComputed) {
+      winComputed = true;
+
+      const levelId = LEVELS[levelIndex].id;
+      const { parTimeMs, maxTimeMs } = getLevelConfig(levelId);
+
+      const totalStars = contacts.starsTotal;
+      const collectedStars = contacts.starsCollected;
+      const timeMs = runTimeMs;
+
+      const breakdown = computeScore({
+        collectedStars,
+        totalStars,
+        timeMs,
+        parTimeMs,
+        maxTimeMs,
+      });
+
+      const rating = computeRating({
+        collectedStars,
+        totalStars,
+        timeMs,
+        parTimeMs,
+        maxTimeMs,
+      });
+
+      winResult = {
+        levelId,
+        timeMs,
+        collectedStars,
+        totalStars,
+        rating,
+        ...breakdown,
+        parTimeMs,
+        maxTimeMs,
+      };
+    }
   }
 
   const p = ball?.getPosition?.() ?? pl.Vec2(0, 0);
   const gDir = GRAVITY_DIRS[gravityIndex].name;
   const stars = contacts ? `${contacts.starsCollected}/${contacts.starsTotal}` : "0/0";
+
   const goal = contacts
     ? `Goal ${contacts.isGoalEnabled() ? "ENABLED" : `LOCKED (${contacts.requiredStars} req)`}`
     : "Goal LOCKED";
 
+  let resultText = "";
+  if (mode === "won" && winResult) {
+    resultText =
+      ` — SCORE ${winResult.score} (stars ${winResult.starsScore} + time ${winResult.timeBonus})` +
+      ` — RATING ${winResult.rating}/3` +
+      ` — PAR ${formatTime(winResult.parTimeMs)}`;
+  }
+
   hudStatus.textContent =
     `[${mode.toUpperCase()}] L${levelIndex + 1}/${LEVELS.length} — Time ${formatTime(runTimeMs)} — ` +
-    `Gravity ${gDir} — Stars ${stars} — ball (${p.x.toFixed(2)}, ${p.y.toFixed(2)})m — ${tmxInfo}`;
+    `Gravity ${gDir} — Stars ${stars} — ${goal}` +
+    resultText +
+    ` — ball (${p.x.toFixed(2)}, ${p.y.toFixed(2)})m — ${tmxInfo}`;
 }
 
 function render(engine) {
