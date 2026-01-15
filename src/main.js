@@ -3,9 +3,14 @@ import { createEngine } from "./core/engine.js";
 import { createCamera } from "./core/camera.js";
 import { createInput } from "./core/input.js";
 
+import { createSceneManager } from "./game/sceneManager.js";
 import { loadProgress, saveProgress, ensureLevelUnlocked, isLevelUnlocked } from "./game/progress.js";
 import { createRunState } from "./game/runState.js";
 import { computeAndPersistWin } from "./game/winFlow.js";
+
+import { createMenuScene } from "./game/scenes/menuScene.js";
+import { createCreditsScene } from "./game/scenes/creditsScene.js";
+import { createLevelsScene } from "./game/scenes/levelsScene.js";
 
 import { renderWorldDebug } from "./world/renderDebug.js";
 import { createLevelManager } from "./world/level/levelManager.js";
@@ -16,10 +21,19 @@ import { renderHud } from "./ui/hud.js";
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
 
+// DOM screens (commit 1)
+const screens = {
+  menu: document.getElementById("screen-menu"),
+  levels: document.getElementById("screen-levels"),
+  credits: document.getElementById("screen-credits"),
+};
+
+const sceneManager = createSceneManager({ screens });
+
 const camera = createCamera();
 const input = createInput();
 
-// Levels list (keep it here or move later to a config file)
+// Levels list (later: move to src/game/levels.js)
 const LEVELS = [{ id: "map101", url: "./assets/maps/map101.tmx" }];
 
 // Progress (localStorage)
@@ -42,6 +56,24 @@ const overlay = createOverlayController({
   onNext: () => nextLevel(),
 });
 
+// --- Scene wiring (commit 3) ---
+const scenes = {};
+
+function go(name, payload = null) {
+  if (name === "menu") return sceneManager.setScene("menu", payload, scenes.menu);
+  if (name === "levels") return sceneManager.setScene("levels", payload, scenes.levels);
+  if (name === "credits") return sceneManager.setScene("credits", payload, scenes.credits);
+
+  // game
+  if (state.mode === "paused") state.mode = "playing";
+  return sceneManager.setScene("game", payload, null);
+}
+
+scenes.menu = createMenuScene({ go });
+scenes.levels = createLevelsScene({ go });
+scenes.credits = createCreditsScene({ go });
+
+// --- Gameplay helpers ---
 async function goToLevel(index) {
   state.resetForLevel();
   state.mode = "loading";
@@ -69,11 +101,18 @@ function nextLevel() {
   }
 }
 
-// Start
+// Keep loading Level 1 so session is ready; scene manager gates update/render while in menu.
 goToLevel(0);
 
+// Start in menu
+go("menu");
+
+// --- Engine loop ---
 function update(dt) {
-  // Input that can happen in any mode
+  // Only run simulation/UI updates while in game scene
+  if (sceneManager.getSceneName() !== "game") return;
+
+  // Global game input
   if (input.consumePause()) {
     if (state.mode === "playing") state.mode = "paused";
     else if (state.mode === "paused") state.mode = "playing";
@@ -143,7 +182,9 @@ function update(dt) {
     });
   } else if (state.mode === "won") {
     const nextUnlocked =
-      levels.getIndex() + 1 < LEVELS.length ? isLevelUnlocked(progress, LEVELS[levels.getIndex() + 1].id) : false;
+      levels.getIndex() + 1 < LEVELS.length
+        ? isLevelUnlocked(progress, LEVELS[levels.getIndex() + 1].id)
+        : false;
 
     const scoreTxt = state.winResult ? `${state.winResult.score}` : "";
     const ratingTxt = state.winResult ? `${state.winResult.rating}/3` : "";
@@ -161,6 +202,8 @@ function update(dt) {
 }
 
 function render(engine) {
+  if (sceneManager.getSceneName() !== "game") return;
+
   const session = levels.getSession();
   if (session?.world) renderWorldDebug(engine, session.world, camera);
 }
