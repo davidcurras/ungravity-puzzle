@@ -1,28 +1,42 @@
+// src/main.js
+import { createEngine } from "./game/engine.js";
+import { createCamera, worldToScreen } from "./game/camera.js";
+
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d", { alpha: false });
+const hudStatus = document.getElementById("hud-status");
 
-function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.floor(window.innerWidth * dpr);
-  canvas.height = Math.floor(window.innerHeight * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+const camera = createCamera();
+
+// Demo “world” object (placeholder)
+const world = {
+  ball: { x: 120, y: 120, r: 18, vx: 40, vy: 0 },
+};
+
+function update(dt, engine) {
+  // Simple placeholder motion to validate dt
+  const b = world.ball;
+  b.x += b.vx * dt;
+  if (b.x > engine.width - b.r || b.x < b.r) b.vx *= -1;
+
+  hudStatus.textContent = `Running — dt ${(dt * 1000).toFixed(1)} ms`;
 }
-window.addEventListener("resize", resize);
-resize();
 
-function loop() {
-  // fondo
+function render(engine) {
+  const { ctx, width, height } = engine;
+
+  // Background
   ctx.fillStyle = "#0b1020";
-  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+  ctx.fillRect(0, 0, width, height);
 
-  // placeholder
+  // Example using camera transform (world->screen)
+  const b = world.ball;
+  const p = worldToScreen(camera, b.x, b.y);
+
   ctx.fillStyle = "#6aa7ff";
   ctx.beginPath();
-  ctx.arc(120, 120, 18, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, b.r * camera.zoom, 0, Math.PI * 2);
   ctx.fill();
-
-  requestAnimationFrame(loop);
 }
-loop();
 
-document.getElementById("hud").textContent = "Ungravity Puzzle";
+const engine = createEngine({ canvas, update, render });
+engine.start();
