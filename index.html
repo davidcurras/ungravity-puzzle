@@ -37,6 +37,61 @@
 
 <body>
   <main id="app">
+
+    <!-- Screens (DOM UI over the canvas) -->
+    <section id="screen-menu" class="screen" aria-label="Main menu">
+      <div class="panel">
+        <h1 class="title">Ungravity</h1>
+        <p class="subtitle">Flip gravity. Guide the ball. Collect stars.</p>
+
+        <div class="actions">
+          <button id="btn-start" class="btn primary" type="button">Start</button>
+          <button id="btn-levels" class="btn" type="button">Level Select</button>
+          <button id="btn-credits" class="btn" type="button">Credits</button>
+        </div>
+
+        <div class="fineprint">v0.1 • Web prototype</div>
+      </div>
+    </section>
+
+    <section id="screen-levels" class="screen hidden" aria-label="Level selection">
+      <div class="panel wide">
+        <div class="row">
+          <h2 class="title-sm">Select a Level</h2>
+          <button id="btn-levels-back" class="btn" type="button">Back</button>
+        </div>
+
+        <div id="levels-grid" class="levels-grid" aria-label="Levels grid">
+          <!-- populated in later commit -->
+          <button class="level-card" type="button" disabled>
+            <span class="level-name">Level 1</span>
+            <span class="level-meta locked">Locked</span>
+          </button>
+        </div>
+
+        <div class="fineprint">Locked levels will unlock as you progress.</div>
+      </div>
+    </section>
+
+    <section id="screen-credits" class="screen hidden" aria-label="Credits">
+      <div class="panel">
+        <h2 class="title-sm">Credits</h2>
+        <p class="credits">
+          Created by David Curras.<br />
+          Inspired by the original <em>Ungravity</em> (2013).
+        </p>
+
+        <ul class="credits-list">
+          <li>Tech: Canvas 2D + Planck.js (Box2D) + TMX (Tiled)</li>
+          <li>Audio & Art: TBD</li>
+        </ul>
+
+        <div class="actions">
+          <button id="btn-credits-back" class="btn primary" type="button">Back</button>
+        </div>
+      </div>
+    </section>
+
     <canvas id="game" aria-label="Ungravity game canvas" role="img"></canvas>
 
     <div id="hud" aria-live="polite">
