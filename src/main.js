@@ -6,6 +6,7 @@ import { renderWorldDebug } from "./game/renderDebug.js";
 import { createInput } from "./game/input.js";
 import { loadTMX } from "./game/tmx.js";
 import { buildLevelFromTMX } from "./game/level.js";
+import { createContactSystem } from "./game/contacts.js";
 
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
@@ -15,6 +16,7 @@ const input = createInput();
 
 const world = createWorld();
 const ball = createBall(world, 160, 120, 18);
+const contacts = createContactSystem(world);
 
 let tmxInfo = "TMX: not loaded";
 
@@ -25,6 +27,9 @@ loadTMX("./assets/maps/map101.tmx")
 
     // Build physics level from TMX objects
     const built = buildLevelFromTMX(world, map, ball);
+    contacts.won = false;
+    contacts.starsCollected = 0;
+    contacts.starsTotal = built.starsTotal;
 
     tmxInfo = `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ${objectLayers.length} object layers — ${objectsCount} objects — built ${built.objectsCount}`;
     console.log("TMX MAP:", map);
@@ -76,17 +81,21 @@ function randomizeGravityDirection() {
 applyGravity();
 
 function update(dt) {
-  if (input.consumeFlip()) {
-    randomizeGravityDirection();
+  if (!contacts.won && input.consumeFlip()) {
+    randomizeGravityDirection(); // tu función 4-way random
   }
 
   world.step(dt, 8, 3);
+  contacts.flushDestroyQueue();
 
   const p = ball.getPosition();
   const gDir = GRAVITY_DIRS[gravityIndex].name;
 
+  const stars = `${contacts.starsCollected}/${contacts.starsTotal}`;
+  const winText = contacts.won ? " — ✅ WIN!" : "";
+
   hudStatus.textContent =
-    `Running — Gravity ${gDir} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms | ${tmxInfo}`;
+    `Running — Gravity ${gDir} — stars ${stars}${winText} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms | ${tmxInfo}`;
 }
 
 function render(engine) {
