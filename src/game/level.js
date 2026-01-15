@@ -3,21 +3,20 @@ import { pl, pxToM } from "./physics.js";
 
 /**
  * Builds physics bodies from TMX object layers.
- * Convention (by name/type prefix):
- * - wall*  => static box
- * - goal*  => static sensor box
- * - star*  => static sensor box (collectable)
- * - goodball* / spawn* => ball start position
+ * Primary convention (recommended):
+ * - object.properties.kind = "wall" | "goal" | "star" | "spawn"
+ *
+ * Fallback convention:
+ * - by name/type prefix:
+ *   wall, goal, star, goodball / spawn
  */
 export function buildLevelFromTMX(world, tmxMap, ballBody) {
-  clearLevelBodies(world, ballBody);
+  clearLevelBodies(world);
 
   const objects = collectObjects(tmxMap);
 
   // 1) Spawn ball
-  const spawn = objects.find((o) =>
-    startsWithAny(o.name, ["goodball", "spawn"]) || startsWithAny(o.type, ["goodball", "spawn"])
-  );
+  const spawn = objects.find((o) => getKind(o) === "spawn");
   if (spawn && spawn.width && spawn.height) {
     const cx = spawn.x + spawn.width / 2;
     const cy = spawn.y + spawn.height / 2;
@@ -29,8 +28,8 @@ export function buildLevelFromTMX(world, tmxMap, ballBody) {
 
   // 2) Walls
   for (const o of objects) {
-    const isWall = startsWithAny(o.name, ["wall"]) || startsWithAny(o.type, ["wall"]);
-    if (!isWall || !o.width || !o.height) continue;
+    if (getKind(o) !== "wall") continue;
+    if (!o.width || !o.height) continue;
 
     const body = world.createBody({
       position: pl.Vec2(pxToM(o.x + o.width / 2), pxToM(o.y + o.height / 2)),
@@ -39,16 +38,16 @@ export function buildLevelFromTMX(world, tmxMap, ballBody) {
 
     body.createFixture(pl.Box(pxToM(o.width / 2), pxToM(o.height / 2)), {
       friction: 0.35,
-      restitution: 0.15, // a bit bouncy
+      restitution: 0.15,
     });
 
-    body.setUserData({ type: "wall", tmxId: o.id, name: o.name });
+    body.setUserData({ type: "wall", level: true, tmxId: o.id, name: o.name });
   }
 
   // 3) Goal (sensor)
   for (const o of objects) {
-    const isGoal = startsWithAny(o.name, ["goal"]) || startsWithAny(o.type, ["goal"]);
-    if (!isGoal || !o.width || !o.height) continue;
+    if (getKind(o) !== "goal") continue;
+    if (!o.width || !o.height) continue;
 
     const body = world.createBody({
       position: pl.Vec2(pxToM(o.x + o.width / 2), pxToM(o.y + o.height / 2)),
@@ -59,14 +58,14 @@ export function buildLevelFromTMX(world, tmxMap, ballBody) {
       isSensor: true,
     });
 
-    body.setUserData({ type: "goal", tmxId: o.id, name: o.name });
+    body.setUserData({ type: "goal", level: true, tmxId: o.id, name: o.name });
   }
 
   // 4) Stars (sensor)
   let starsTotal = 0;
   for (const o of objects) {
-    const isStar = startsWithAny(o.name, ["star"]) || startsWithAny(o.type, ["star"]);
-    if (!isStar || !o.width || !o.height) continue;
+    if (getKind(o) !== "star") continue;
+    if (!o.width || !o.height) continue;
 
     const body = world.createBody({
       position: pl.Vec2(pxToM(o.x + o.width / 2), pxToM(o.y + o.height / 2)),
@@ -77,7 +76,7 @@ export function buildLevelFromTMX(world, tmxMap, ballBody) {
       isSensor: true,
     });
 
-    body.setUserData({ type: "star", tmxId: o.id, name: o.name });
+    body.setUserData({ type: "star", level: true, tmxId: o.id, name: o.name });
     starsTotal++;
   }
 
@@ -93,12 +92,27 @@ function collectObjects(tmxMap) {
   return objs;
 }
 
-function clearLevelBodies(world, ballBody) {
+function clearLevelBodies(world) {
   for (let b = world.getBodyList(); b; ) {
     const next = b.getNext();
-    if (b !== ballBody) world.destroyBody(b);
+    const ud = b.getUserData() || {};
+    if (ud.level === true) world.destroyBody(b);
     b = next;
   }
+}
+
+function getKind(o) {
+  // Priority: TMX custom property
+  const kindProp = o?.properties?.kind;
+  if (kindProp) return String(kindProp).toLowerCase();
+
+  // Fallback: name/type prefixes
+  if (startsWithAny(o.name, ["wall"]) || startsWithAny(o.type, ["wall"])) return "wall";
+  if (startsWithAny(o.name, ["goal"]) || startsWithAny(o.type, ["goal"])) return "goal";
+  if (startsWithAny(o.name, ["star"]) || startsWithAny(o.type, ["star"])) return "star";
+  if (startsWithAny(o.name, ["goodball", "spawn"]) || startsWithAny(o.type, ["goodball", "spawn"])) return "spawn";
+
+  return "";
 }
 
 function startsWithAny(str, prefixes) {
