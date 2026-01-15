@@ -1,6 +1,8 @@
 // src/game/contacts.js
 
 export function createContactSystem(world) {
+  const collectedBodies = new Set(); // track collected stars safely
+
   const state = {
     won: false,
     starsCollected: 0,
@@ -18,7 +20,6 @@ export function createContactSystem(world) {
     const a = ba.getUserData() || {};
     const b = bb.getUserData() || {};
 
-    // We only care about ball touching other things
     const isBallA = a.type === "ball";
     const isBallB = b.type === "ball";
     if (!isBallA && !isBallB) return;
@@ -32,9 +33,17 @@ export function createContactSystem(world) {
     }
 
     if (otherData.type === "star") {
-      // Avoid double-collect
-      if (otherBody._collected) return;
-      otherBody._collected = true;
+      // Avoid double collect (begin-contact can fire multiple times)
+      if (collectedBodies.has(otherBody)) return;
+      collectedBodies.add(otherBody);
+
+      // Optional: tag for debug
+      try {
+        const prev = otherBody.getUserData() || {};
+        otherBody.setUserData({ ...prev, collected: true });
+      } catch {
+        // ignore
+      }
 
       state.starsCollected += 1;
       state.destroyQueue.push(otherBody);
@@ -45,13 +54,21 @@ export function createContactSystem(world) {
   state.flushDestroyQueue = () => {
     while (state.destroyQueue.length) {
       const body = state.destroyQueue.pop();
-      // Make sure it still exists
       try {
         world.destroyBody(body);
       } catch {
         // ignore if already destroyed
       }
     }
+  };
+
+  // Reset per level load
+  state.reset = (starsTotal = 0) => {
+    state.won = false;
+    state.starsCollected = 0;
+    state.starsTotal = starsTotal;
+    state.destroyQueue.length = 0;
+    collectedBodies.clear();
   };
 
   return state;

@@ -27,6 +27,7 @@ loadTMX("./assets/maps/map101.tmx")
 
     // Build physics level from TMX objects
     const built = buildLevelFromTMX(world, map, ball);
+    contacts.reset(built.starsTotal);
     contacts.won = false;
     contacts.starsCollected = 0;
     contacts.starsTotal = built.starsTotal;
