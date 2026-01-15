@@ -41,30 +41,51 @@ floor.createFixture(pl.Box(40, 0.5), { friction: 0.4 });
 floor.setUserData({ type: "floor" });
 */
 
-// Gravity state
-let gravityY = 9.8;
-world.setGravity(pl.Vec2(0, gravityY));
+// Gravity state (4-way, random excluding current)
+const GRAVITY_MAG = 9.8;
 
-function flipGravity() {
-  gravityY *= -1;
-  world.setGravity(pl.Vec2(0, gravityY));
+const GRAVITY_DIRS = [
+  { name: "DOWN",  v: () => pl.Vec2(0,  GRAVITY_MAG) },
+  { name: "UP",    v: () => pl.Vec2(0, -GRAVITY_MAG) },
+  { name: "RIGHT", v: () => pl.Vec2( GRAVITY_MAG, 0) },
+  { name: "LEFT",  v: () => pl.Vec2(-GRAVITY_MAG, 0) },
+];
 
-  // Wake up every dynamic body so gravity change takes effect immediately
+let gravityIndex = 0; // start DOWN by default
+
+function applyGravity() {
+  world.setGravity(GRAVITY_DIRS[gravityIndex].v());
+
+  // Wake up dynamic bodies so the change takes effect immediately
   for (let b = world.getBodyList(); b; b = b.getNext()) {
     if (!b.isStatic()) b.setAwake(true);
   }
 }
 
+function randomizeGravityDirection() {
+  // pick any direction except the current one
+  let next = gravityIndex;
+  while (next === gravityIndex) {
+    next = Math.floor(Math.random() * GRAVITY_DIRS.length);
+  }
+  gravityIndex = next;
+  applyGravity();
+}
+
+// initial gravity
+applyGravity();
+
 function update(dt) {
   if (input.consumeFlip()) {
-    flipGravity();
+    randomizeGravityDirection();
   }
 
   world.step(dt, 8, 3);
 
   const p = ball.getPosition();
-  const gDir = gravityY > 0 ? "DOWN" : "UP";
-   hudStatus.textContent =
+  const gDir = GRAVITY_DIRS[gravityIndex].name;
+
+  hudStatus.textContent =
     `Running — Gravity ${gDir} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms | ${tmxInfo}`;
 }
 

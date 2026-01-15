@@ -36,7 +36,8 @@ export function buildLevelFromTMX(world, tmxMap, ballBody) {
     });
 
     body.createFixture(pl.Box(pxToM(o.width / 2), pxToM(o.height / 2)), {
-      friction: 0.4,
+      friction: 0.3,
+      resstitution: 0.2
     });
 
     body.setUserData({ type: "wall", tmxId: o.id, name: o.name });

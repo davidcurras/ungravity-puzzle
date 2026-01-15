@@ -30,7 +30,7 @@ export function createBall(world, xPx, yPx, radiusPx) {
   body.createFixture(pl.Circle(pxToM(radiusPx)), {
     density: 1.0,
     friction: 0.2,
-    restitution: 0.2,
+    restitution: 0.5,
   });
 
   body.setUserData({ type: "ball" });
