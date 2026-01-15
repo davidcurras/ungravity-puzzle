@@ -79,6 +79,39 @@ function go(name, payload = null) {
   return sceneManager.setScene("game", payload, null);
 }
 
+// --- Back button handling (Browser Back) ---
+function setupBackNavigation({ go, sceneManager, overlay, state }) {
+  // Push an initial state so Back triggers popstate inside the app first
+  if (!history.state || !history.state.__ungravity) {
+    history.replaceState({ __ungravity: true, page: "boot" }, "");
+  }
+  history.pushState({ __ungravity: true, page: "app" }, "");
+
+  window.addEventListener("popstate", () => {
+    const scene = sceneManager.getSceneName?.() || sceneManager.getScene?.() || "";
+
+    // 1) If an overlay is open, close it first (treat back like "close modal")
+    // If you don't have a "isVisible", you can just hide defensively.
+    overlay?.hide?.();
+
+    // 2) If playing, go back to menu (or levels)
+    if (scene === "game") {
+      // if you want "back" to pause instead of menu, change this
+      state.mode = "paused"; // optional
+      go("menu");
+    } else if (scene === "levels" || scene === "credits") {
+      go("menu");
+    } else {
+      // already in menu: allow leaving site on next back
+      // don't re-push state here
+      return;
+    }
+
+    // Re-push so user needs a second Back to actually leave the site
+    history.pushState({ __ungravity: true, page: "app" }, "");
+  });
+}
+
 // --- Gameplay helpers ---
 async function goToLevel(index) {
   state.resetForLevel();
@@ -262,6 +295,8 @@ function render(engine) {
   const session = levels.getSession();
   if (session?.world) renderWorldDebug(engine, session.world, camera);
 }
+
+setupBackNavigation({ go, sceneManager, overlay, state });
 
 const engine = createEngine({ canvas, update, render });
 engine.start();
