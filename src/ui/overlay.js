@@ -1,31 +1,63 @@
 // src/ui/overlay.js
-export function createOverlayController({ onResume, onReplay, onNext }) {
-  const overlay = document.getElementById("overlay");
+
+export function createOverlayController({ onResume, onReplay, onNext, onLevels, onMenu }) {
+  const root = document.getElementById("overlay");
   const titleEl = document.getElementById("overlay-title");
   const subtitleEl = document.getElementById("overlay-subtitle");
-  const statsEl = document.getElementById("overlay-stats");
 
   const btnResume = document.getElementById("btn-resume");
   const btnReplay = document.getElementById("btn-replay");
   const btnNext = document.getElementById("btn-next");
+  const btnLevels = document.getElementById("btn-levels");
+  const btnMenu = document.getElementById("btn-menu");
 
-  btnResume.addEventListener("click", () => onResume?.());
-  btnReplay.addEventListener("click", () => onReplay?.());
-  btnNext.addEventListener("click", () => onNext?.());
+  function setVisible(el, v) {
+    if (!el) return;
+    el.classList.toggle("hidden", !v);
+  }
 
-  function show({ title, subtitle, stats, canResume, canNext }) {
-    titleEl.textContent = title || "";
-    subtitleEl.textContent = subtitle || "";
-    statsEl.textContent = stats || "";
+  function setDisabled(el, d) {
+    if (!el) return;
+    el.disabled = !!d;
+  }
 
-    btnResume.disabled = !canResume;
-    btnNext.disabled = !canNext;
+  // Attach listeners once
+  btnResume?.addEventListener("click", () => onResume?.());
+  btnReplay?.addEventListener("click", () => onReplay?.());
+  btnNext?.addEventListener("click", () => onNext?.());
+  btnLevels?.addEventListener("click", () => onLevels?.());
+  btnMenu?.addEventListener("click", () => onMenu?.());
 
-    overlay.classList.remove("hidden");
+  function show({
+    kind = "pause", // "pause" | "win"
+    title = "",
+    subtitle = "",
+    canResume = false,
+    canNext = false,
+    showLevels = true,
+    showMenu = true,
+  } = {}) {
+    if (!root) return;
+
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+
+    root.classList.remove("hidden");
+
+    // Buttons
+    setVisible(btnResume, !!canResume);
+    setVisible(btnReplay, true);
+    setVisible(btnNext, kind === "win");
+    setVisible(btnLevels, !!showLevels);
+    setVisible(btnMenu, !!showMenu);
+
+    setDisabled(btnResume, !canResume);
+    setDisabled(btnNext, !canNext);
   }
 
   function hide() {
-    overlay.classList.add("hidden");
+    if (!root) return;
+    root.classList.add("hidden");
   }
 
   return { show, hide };
