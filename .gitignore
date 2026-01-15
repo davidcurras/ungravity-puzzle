@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Node (solo si alguna vez usás herramientas; no molesta tenerlo)
+node_modules/
+
+# Build / cache (por si agregás algo en el futuro)
+dist/
+build/
+.cache/
+.tmp/
+.temp/
+
+# Env
+.env
+.env.*

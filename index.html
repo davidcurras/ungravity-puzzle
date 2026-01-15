@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+
+  <title>Ungravity Puzzle</title>
+  <meta name="description" content="ungravity is a gravity-flip maze puzzle where you guide floating colored balls to the goal." />
+  <meta name="robots" content="index,follow" />
+  <meta name="theme-color" content="#0b1020" />
+
+  <!-- Canonical (update once published) -->
+  <link rel="canonical" href="https://davidcurras.github.io/ungravity-puzzle/" />
+
+  <!-- Icons -->
+  <link rel="icon" href="./assets/web/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="./css/reset.css" />
+  <link rel="stylesheet" href="./css/style.css" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ungravity — Gravity Flip Puzzle" />
+  <meta property="og:description" content="Flip gravity to guide floating colored balls through mazes and reach the goal." />
+  <meta property="og:url" content="https://davidcurras.github.io/ungravity-puzzle/" />
+  <meta property="og:image" content="https://davidcurras.github.io/ungravity-puzzle/assets/web/favicon.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ungravity — Gravity Flip Puzzle" />
+  <meta name="twitter:description" content="Flip gravity to guide floating colored balls through mazes and reach the goal." />
+  <meta name="twitter:image" content="https://davidcurras.github.io/ungravity-puzzle/assets/web/favicon.png" />
+</head>
+
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Ungravity game canvas" role="img"></canvas>
+
+    <div id="hud" aria-live="polite">
+      <strong>Ungravity</strong>
+      <span id="hud-status">Loading…</span>
+    </div>
+
+    <noscript>
+      <div style="padding:16px;color:#fff;font-family:system-ui">
+        This game requires JavaScript enabled.
+      </div>
+    </noscript>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
