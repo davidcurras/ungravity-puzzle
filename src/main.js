@@ -5,6 +5,7 @@ import { pl, createWorld, createBall } from "./game/physics.js";
 import { renderWorldDebug } from "./game/renderDebug.js";
 import { createInput } from "./game/input.js";
 import { loadTMX } from "./game/tmx.js";
+import { buildLevelFromTMX } from "./game/level.js";
 
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
@@ -22,7 +23,10 @@ loadTMX("./assets/maps/map101.tmx")
     const objectLayers = map.layers.filter((l) => l.type === "objectgroup");
     const objectsCount = objectLayers.reduce((acc, l) => acc + l.objects.length, 0);
 
-    tmxInfo = `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ${objectLayers.length} object layers — ${objectsCount} objects`;
+    // Build physics level from TMX objects
+    const built = buildLevelFromTMX(world, map, ball);
+
+    tmxInfo = `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ${objectLayers.length} object layers — ${objectsCount} objects — built ${built.objectsCount}`;
     console.log("TMX MAP:", map);
   })
   .catch((err) => {
@@ -30,10 +34,12 @@ loadTMX("./assets/maps/map101.tmx")
     console.error(err);
   });
 
-// Static floor
+
+/* // Static floor
 const floor = world.createBody({ position: pl.Vec2(0, 22) });
 floor.createFixture(pl.Box(40, 0.5), { friction: 0.4 });
 floor.setUserData({ type: "floor" });
+*/
 
 // Gravity state
 let gravityY = 9.8;
