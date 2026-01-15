@@ -9,61 +9,97 @@ export function createLevelsScene({ go, getLevels, getProgress, startLevel }) {
     go("menu");
   }
 
-  function getRatingFor(levelId) {
-    const p = getProgress();
-    const rec = p?.levels?.[levelId];
-    return rec?.rating || 0; // 0..3
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function formatTime(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return "—";
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    const tenths = Math.floor((ms % 1000) / 100);
+    return `${pad2(min)}:${pad2(sec)}.${tenths}`;
+  }
+
+  function clampRating(r) {
+    return Math.max(0, Math.min(3, r | 0));
   }
 
   function starString(rating) {
-    // Visual: ★★★ or ★★☆ etc
-    const full = "★".repeat(Math.max(0, Math.min(3, rating)));
-    const empty = "☆".repeat(3 - Math.max(0, Math.min(3, rating)));
-    return full + empty;
+    const r = clampRating(rating);
+    return "★".repeat(r) + "☆".repeat(3 - r);
+  }
+
+  function getRecord(levelId) {
+    const p = getProgress();
+    return p?.levels?.[levelId] || null;
   }
 
   function renderGrid() {
     if (!grid) return;
+
     const levels = getLevels();
     const progress = getProgress();
-
     grid.innerHTML = "";
 
     levels.forEach((lvl, index) => {
       const unlocked = isLevelUnlocked(progress, lvl.id);
-      const rating = getRatingFor(lvl.id);
+      const rec = getRecord(lvl.id);
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "level-card";
-      btn.disabled = !unlocked;
+      const rating = rec?.bestRating ?? 0;
+      const bestScore = rec?.bestScore ?? -1;
+      const bestTimeMs = rec?.bestTimeMs ?? null;
+      const bestStars = rec?.bestCollectedStars ?? 0;
+      const starsTotal = rec?.starsTotal ?? null;
 
-      const name = document.createElement("span");
-      name.className = "level-name";
-      name.textContent = `Level ${index + 1}`;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "level-card";
+      card.disabled = !unlocked;
 
-      const meta = document.createElement("span");
-      meta.className = "level-meta";
+      const title = document.createElement("div");
+      title.className = "level-title";
+      title.textContent = `Level ${index + 1}`;
+
+      const line1 = document.createElement("div");
+      line1.className = "level-line";
+
       if (!unlocked) {
-        meta.classList.add("locked");
-        meta.textContent = "Locked";
-      } else if (rating > 0) {
-        meta.textContent = `Rating ${starString(rating)}`;
+        line1.innerHTML = `<span class="badge locked">🔒 Locked</span>`;
+      } else if (!rec) {
+        line1.innerHTML = `<span class="badge unlocked">Unlocked</span> <span class="muted">— Not completed</span>`;
       } else {
-        meta.textContent = "Unlocked";
+        line1.innerHTML = `<span class="rating">${starString(rating)}</span>`;
       }
 
-      btn.appendChild(name);
-      btn.appendChild(meta);
+      const line2 = document.createElement("div");
+      line2.className = "level-line muted";
+
+      if (!unlocked) {
+        line2.textContent = "Beat the previous level to unlock.";
+      } else if (!rec) {
+        line2.textContent = "Play to set your best score.";
+      } else {
+        const scoreTxt = bestScore >= 0 ? bestScore.toLocaleString("en-US") : "—";
+        const timeTxt = formatTime(bestTimeMs);
+        const starsTxt = starsTotal != null ? `${bestStars}/${starsTotal}` : "";
+
+        line2.textContent = `Best: ${starString(rating)} · ${scoreTxt} pts · ${timeTxt}${starsTxt ? " · " + starsTxt + " stars" : ""}`;
+      }
+
+      card.appendChild(title);
+      card.appendChild(line1);
+      card.appendChild(line2);
 
       if (unlocked) {
-        btn.addEventListener("click", () => {
+        card.addEventListener("click", () => {
           startLevel(index);
           go("game");
         });
       }
 
-      grid.appendChild(btn);
+      grid.appendChild(card);
     });
   }
 

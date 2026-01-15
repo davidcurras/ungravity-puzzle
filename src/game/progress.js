@@ -2,6 +2,39 @@
 
 const STORAGE_KEY = "ungravity_progress_v1";
 
+function isNum(v) {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function normalizeProgress(p) {
+  // Fix legacy JSON serializations (Infinity/-Infinity become null).
+  if (!p || typeof p !== "object") return {
+    version: 1,
+    unlocked: {},
+    levels: {},
+  };
+
+  p.version = 1;
+  p.unlocked = p.unlocked && typeof p.unlocked === "object" ? p.unlocked : {};
+  p.levels = p.levels && typeof p.levels === "object" ? p.levels : {};
+
+  for (const [levelId, rec] of Object.entries(p.levels)) {
+    if (!rec || typeof rec !== "object") {
+      delete p.levels[levelId];
+      continue;
+    }
+
+    // Coerce bad values to null/0.
+    if (!isNum(rec.bestScore)) rec.bestScore = null;
+    if (!isNum(rec.bestTimeMs)) rec.bestTimeMs = null;
+    if (!isNum(rec.bestRating)) rec.bestRating = 0;
+    if (!isNum(rec.bestStarsCollected)) rec.bestStarsCollected = 0;
+    if (!isNum(rec.starsTotal)) rec.starsTotal = null;
+  }
+
+  return p;
+}
+
 function safeParse(json, fallback) {
   try {
     const v = JSON.parse(json);
@@ -13,11 +46,12 @@ function safeParse(json, fallback) {
 
 export function loadProgress() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  return safeParse(raw, {
+  const parsed = safeParse(raw, {
     version: 1,
     unlocked: {}, // { [levelId]: true }
-    levels: {},   // { [levelId]: { bestScore, bestRating, bestTimeMs, bestStarsCollected } }
+    levels: {},   // { [levelId]: { bestScore, bestRating, bestTimeMs, bestStarsCollected, starsTotal } }
   });
+  return normalizeProgress(parsed);
 }
 
 export function saveProgress(progress) {
@@ -33,14 +67,15 @@ export function isLevelUnlocked(progress, levelId) {
 }
 
 export function updateLevelBest(progress, levelId, result) {
-  // result: { score, rating, timeMs, collectedStars }
+  // result: { score, rating, timeMs, collectedStars, starsTotal }
   const prev = progress.levels[levelId] || null;
 
   const next = {
-    bestScore: prev?.bestScore ?? -Infinity,
+    bestScore: isNum(prev?.bestScore) ? prev.bestScore : null,
     bestRating: prev?.bestRating ?? 0,
-    bestTimeMs: prev?.bestTimeMs ?? Infinity,
+    bestTimeMs: isNum(prev?.bestTimeMs) ? prev.bestTimeMs : null,
     bestStarsCollected: prev?.bestStarsCollected ?? 0,
+    starsTotal: isNum(prev?.starsTotal) ? prev.starsTotal : null,
   };
 
   // Best rating (higher is better)
@@ -49,18 +84,22 @@ export function updateLevelBest(progress, levelId, result) {
   }
 
   // Best score (higher is better)
-  if (typeof result.score === "number" && result.score > next.bestScore) {
+  if (isNum(result.score) && (!isNum(next.bestScore) || result.score > next.bestScore)) {
     next.bestScore = result.score;
   }
 
-  // Best time (lower is better) — only if level was completed
-  if (typeof result.timeMs === "number" && result.timeMs < next.bestTimeMs) {
+  // Best time (lower is better)
+  if (isNum(result.timeMs) && (!isNum(next.bestTimeMs) || result.timeMs < next.bestTimeMs)) {
     next.bestTimeMs = result.timeMs;
   }
 
   // Best stars collected (higher is better)
   if (typeof result.collectedStars === "number" && result.collectedStars > next.bestStarsCollected) {
     next.bestStarsCollected = result.collectedStars;
+  }
+
+  if (isNum(result.starsTotal)) {
+    next.starsTotal = result.starsTotal;
   }
 
   progress.levels[levelId] = next;

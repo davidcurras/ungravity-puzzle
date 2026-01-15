@@ -2,14 +2,16 @@
 
 export function createOverlayController({ onResume, onReplay, onNext, onLevels, onMenu }) {
   const root = document.getElementById("overlay");
-  const titleEl = document.getElementById("overlay-title");
-  const subtitleEl = document.getElementById("overlay-subtitle");
 
-  const btnResume = document.getElementById("btn-resume");
-  const btnReplay = document.getElementById("btn-replay");
-  const btnNext = document.getElementById("btn-next");
-  const btnLevels = document.getElementById("btn-levels");
-  const btnMenu = document.getElementById("btn-menu");
+  // Scope everything to the overlay root to avoid collisions with duplicated IDs in other screens
+  const titleEl = root?.querySelector("#overlay-title");
+  const subtitleEl = root?.querySelector("#overlay-subtitle");
+
+  const btnResume = root?.querySelector("#btn-resume");
+  const btnReplay = root?.querySelector("#btn-replay");
+  const btnNext = root?.querySelector("#btn-next");
+  const btnLevels = root?.querySelector("#btn-levels");
+  const btnMenu = root?.querySelector("#btn-menu");
 
   function setVisible(el, v) {
     if (!el) return;
@@ -39,18 +41,25 @@ export function createOverlayController({ onResume, onReplay, onNext, onLevels, 
   } = {}) {
     if (!root) return;
 
+    root.classList.remove("hidden");
     if (titleEl) titleEl.textContent = title;
     if (subtitleEl) subtitleEl.textContent = subtitle;
 
-    root.classList.remove("hidden");
+    // Labels
+    if (btnResume) btnResume.textContent = "Resume";
+    if (btnReplay) btnReplay.textContent = kind === "win" ? "Play Again" : "Restart";
+    if (btnNext) btnNext.textContent = "Next Level";
+    if (btnLevels) btnLevels.textContent = "Level Select";
+    if (btnMenu) btnMenu.textContent = "Main Menu";
 
-    // Buttons
-    setVisible(btnResume, !!canResume);
-    setVisible(btnReplay, true);
+    // Visibility
+    setVisible(btnResume, kind === "pause");
     setVisible(btnNext, kind === "win");
+    setVisible(btnReplay, true);
     setVisible(btnLevels, !!showLevels);
     setVisible(btnMenu, !!showMenu);
 
+    // Enabled states
     setDisabled(btnResume, !canResume);
     setDisabled(btnNext, !canNext);
   }

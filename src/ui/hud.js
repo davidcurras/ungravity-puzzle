@@ -1,50 +1,62 @@
 // src/ui/hud.js
-function formatTime(ms) {
-  const totalSeconds = ms / 1000;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  const tenths = Math.floor((ms % 1000) / 100);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${tenths}`;
+
+import { REQUIRED_STAR_RATIO } from "../config.js";
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
 }
 
-export function renderHud(hudEl, data) {
+function formatTime(ms) {
+  if (!Number.isFinite(ms) || ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  const tenths = Math.floor((ms % 1000) / 100);
+  return `${pad2(min)}:${pad2(sec)}.${tenths}`;
+}
+
+export function renderHud(hudStatusEl, data) {
+  if (!hudStatusEl) return;
+
   const {
     mode,
     levelIndex,
     levelsCount,
     timeMs,
-    tmxInfo,
     gravityName,
-    ballPos,
     contacts,
+    tmxInfo,
     winResult,
-  } = data;
+  } = data || {};
 
-  const formattedTime = formatTime(timeMs);
+  const lvl = Number.isFinite(levelIndex) ? levelIndex + 1 : 1;
+  const lvlCount = Number.isFinite(levelsCount) ? levelsCount : 1;
 
-  const starsText = contacts ? `${contacts.starsCollected}/${contacts.starsTotal}` : "0/0";
-  const goalText = contacts
-    ? `Goal ${contacts.isGoalEnabled() ? "ENABLED" : `LOCKED (${contacts.requiredStars} req)`}`
-    : "Goal LOCKED";
+  const collected = contacts?.starsCollected ?? 0;
+  const total = contacts?.starsTotal ?? 0;
 
-  let resultText = "";
-  if (mode === "won" && winResult) {
-    resultText =
-      ` — SCORE ${winResult.score} (stars ${winResult.starsScore} + time ${winResult.timeBonus})` +
-      ` — RATING ${winResult.rating}/3` +
-      ` — PAR ${formatTime(winResult.parTimeMs)}`;
+  // goal gating
+  const needed =
+    contacts?.requiredStars ?? (total > 0 ? Math.ceil(total * REQUIRED_STAR_RATIO) : 0);
+  const goalReady =
+    total === 0 ? true : contacts?.isGoalEnabled ? contacts.isGoalEnabled() : collected >= needed;
+  const goalTxt =
+    total === 0 ? "" : goalReady ? "Goal: READY" : `Goal: locked (${collected}/${needed})`;
+
+  const timeTxt = formatTime(timeMs || 0);
+  const starsTxt = total > 0 ? `Stars: ${collected}/${total}` : "Stars: —";
+  const gravTxt = gravityName ? `Gravity: ${gravityName}` : "Gravity: —";
+
+  let tail = "";
+  if (mode === "paused") tail = " · Paused";
+  if (mode === "won") {
+    const score = winResult?.score != null ? winResult.score : "";
+    const rating = winResult?.rating != null ? `${winResult.rating}/3` : "";
+    tail = ` · WIN${score ? ` · ${score} pts` : ""}${rating ? ` · ${rating}` : ""}`;
   }
 
-  const p = ballPos;
-  const ballText = p ? `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})m` : "(—, —)m";
+  const info = tmxInfo ? ` · ${tmxInfo}` : "";
 
-  hudEl.textContent =
-    `[${mode.toUpperCase()}] L${levelIndex + 1}/${levelsCount} — Time ${formattedTime} — ` +
-    `Gravity ${gravityName} — Stars ${starsText} — ${goalText}` +
-    resultText +
-    ` — ball ${ballText} — ${tmxInfo}`;
-
-  // Handy for overlay caller
-  data.formattedTime = formattedTime;
-  data.starsText = starsText;
+  hudStatusEl.textContent =
+    `Level ${lvl}/${lvlCount} · ${starsTxt} · ${goalTxt} · ${gravTxt} · Time: ${timeTxt}${tail}${info}`;
 }

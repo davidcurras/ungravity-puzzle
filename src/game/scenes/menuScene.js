@@ -1,22 +1,37 @@
 // src/game/scenes/menuScene.js
 
-export function createMenuScene({ go }) {
-  const btnStart = document.getElementById("btn-start");
-  const btnLevels = document.getElementById("btn-levels");
-  const btnCredits = document.getElementById("btn-credits");
+export function createMenuScene({ go, hasActiveRun = () => false }) {
+  const screen = document.getElementById("screen-menu");
 
-  function onStart() { go("game"); }
-  function onLevels() { go("levels"); }
-  function onCredits() { go("credits"); }
+  const btnPlay = screen?.querySelector("#btn-start");
+  const btnLevels = screen?.querySelector("#btn-levels");
+  const btnCredits = screen?.querySelector("#btn-credits");
+
+  function syncLabels() {
+    if (btnPlay) btnPlay.textContent = hasActiveRun() ? "Continue" : "Play";
+  }
+
+  function onPlay() {
+    go("game");
+  }
+
+  function onLevels() {
+    go("levels");
+  }
+
+  function onCredits() {
+    go("credits");
+  }
 
   return {
     onEnter() {
-      btnStart?.addEventListener("click", onStart);
+      syncLabels();
+      btnPlay?.addEventListener("click", onPlay);
       btnLevels?.addEventListener("click", onLevels);
       btnCredits?.addEventListener("click", onCredits);
     },
     onExit() {
-      btnStart?.removeEventListener("click", onStart);
+      btnPlay?.removeEventListener("click", onPlay);
       btnLevels?.removeEventListener("click", onLevels);
       btnCredits?.removeEventListener("click", onCredits);
     },

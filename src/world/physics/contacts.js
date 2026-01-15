@@ -1,6 +1,6 @@
 // src/world/physics/contacts.js
 
-const REQUIRED_RATIO = 0.3;
+import { REQUIRED_STAR_RATIO } from "../../config.js";
 
 export function createContactSystem(world) {
   const collectedBodies = new Set();
@@ -10,6 +10,7 @@ export function createContactSystem(world) {
     starsCollected: 0,
     starsTotal: 0,
     requiredStars: 0,
+    requiredRatio: REQUIRED_STAR_RATIO,
     destroyQueue: [],
   };
 
@@ -72,7 +73,7 @@ export function createContactSystem(world) {
     state.won = false;
     state.starsCollected = 0;
     state.starsTotal = starsTotal;
-    state.requiredStars = Math.ceil(starsTotal * REQUIRED_RATIO);
+    state.requiredStars = Math.ceil(starsTotal * state.requiredRatio);
     state.destroyQueue.length = 0;
     collectedBodies.clear();
   };

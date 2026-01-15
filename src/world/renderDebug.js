@@ -1,33 +1,22 @@
 // src/world/renderDebug.js
 import { mToPx, pl } from "./physics/physics.js";
 
-/**
- * Debug draw for Planck (Box2D) world:
- * - Circles
- * - Polygons (boxes)
- *
- * Coordinates: Planck is in meters, we render in pixels.
- */
 export function renderWorldDebug(engine, world, camera) {
-  const { ctx, width, height } = engine;
+  const { ctx, viewW, viewH } = engine;
 
-  // Background
+  // Background inside the virtual viewport
   ctx.fillStyle = "#0b1020";
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, viewW, viewH);
 
-  // Optional: draw origin axes (world 0,0)
-  drawAxes(ctx, camera);
+  drawAxes(ctx, camera, viewW, viewH);
 
-  // Iterate bodies
   for (let body = world.getBodyList(); body; body = body.getNext()) {
     const userData = body.getUserData() || {};
     const isStatic = body.isStatic();
 
-    // Color scheme
     const stroke = isStatic ? "rgba(255,255,255,0.22)" : "rgba(106,167,255,0.9)";
     const fill = isStatic ? "rgba(255,255,255,0.06)" : "rgba(106,167,255,0.18)";
 
-    // Iterate fixtures
     for (let fixture = body.getFixtureList(); fixture; fixture = fixture.getNext()) {
       const shape = fixture.getShape();
       const type = shape.getType();
@@ -40,12 +29,9 @@ export function renderWorldDebug(engine, world, camera) {
         drawCircle(ctx, body, shape, camera, isSensor ? sensorStroke : stroke, isSensor ? sensorFill : fill);
       } else if (type === "polygon") {
         drawPolygon(ctx, body, shape, camera, isSensor ? sensorStroke : stroke, isSensor ? sensorFill : fill);
-      } else {
-        // Other types (edge/chain) can be added later if needed
       }
     }
 
-    // Optional: label body type
     if (userData.type) {
       const p = body.getPosition();
       const sx = mToPx(p.x - camera.x);
@@ -57,25 +43,23 @@ export function renderWorldDebug(engine, world, camera) {
   }
 }
 
-function drawAxes(ctx, camera) {
+function drawAxes(ctx, camera, viewW, viewH) {
   const ox = mToPx(0 - camera.x);
   const oy = mToPx(0 - camera.y);
 
   ctx.strokeStyle = "rgba(255,255,255,0.08)";
   ctx.beginPath();
   ctx.moveTo(0, oy);
-  ctx.lineTo(window.innerWidth, oy);
+  ctx.lineTo(viewW, oy);
   ctx.moveTo(ox, 0);
-  ctx.lineTo(ox, window.innerHeight);
+  ctx.lineTo(ox, viewH);
   ctx.stroke();
 }
 
 function drawCircle(ctx, body, circleShape, camera, strokeStyle, fillStyle) {
-  // World position of circle center
   const bodyPos = body.getPosition();
   const bodyAngle = body.getAngle();
 
-  // circleShape.m_p is local offset from body origin
   const localCenter = circleShape.m_p;
   const worldCenter = pl.Vec2(
     bodyPos.x + (localCenter.x * Math.cos(bodyAngle) - localCenter.y * Math.sin(bodyAngle)),
@@ -95,7 +79,6 @@ function drawCircle(ctx, body, circleShape, camera, strokeStyle, fillStyle) {
   ctx.fill();
   ctx.stroke();
 
-  // Draw a small "direction" line to see rotation
   const dx = Math.cos(bodyAngle) * r;
   const dy = Math.sin(bodyAngle) * r;
   ctx.beginPath();
@@ -117,7 +100,6 @@ function drawPolygon(ctx, body, polyShape, camera, strokeStyle, fillStyle) {
   for (let i = 0; i < vertices.length; i++) {
     const v = vertices[i];
 
-    // Rotate local vertex by body angle, then translate by body position
     const wx = bodyPos.x + (v.x * Math.cos(a) - v.y * Math.sin(a));
     const wy = bodyPos.y + (v.x * Math.sin(a) + v.y * Math.cos(a));
 

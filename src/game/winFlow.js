@@ -41,6 +41,7 @@ export function computeAndPersistWin({ progress, levels, levelIndex, levelId, co
     rating: winResult.rating,
     timeMs: winResult.timeMs,
     collectedStars: winResult.collectedStars,
+    starsTotal: winResult.totalStars,
   });
 
   // Unlock next

@@ -54,6 +54,12 @@ saveProgress(progress);
 // --- Run state ---
 const state = createRunState();
 
+// --- Fixed timestep (stable physics) ---
+const FIXED_STEP = 1 / 60;      // 60 Hz physics
+const MAX_ACCUM = 0.25;         // clamp to avoid spiral of death
+const MAX_STEPS_PER_FRAME = 6;  // cap substeps
+let accumulator = 0;
+
 // --- Level manager (world/session) ---
 const levels = createLevelManager({ levels: LEVELS, progress });
 
@@ -77,6 +83,7 @@ function go(name, payload = null) {
 async function goToLevel(index) {
   state.resetForLevel();
   state.mode = "loading";
+  accumulator = 0;
 
   try {
     const info = await levels.load(index);
@@ -138,18 +145,15 @@ go("menu");
 function update(dt) {
   if (sceneManager.getSceneName() !== "game") return;
 
-  // Pause toggle (only when not loading)
-  if (input.consumePause && input.consumePause()) {
+  // Pause toggle (avoid toggling during loading)
+  if (state.mode !== "loading" && input.consumePause()) {
     if (state.mode === "playing") state.mode = "paused";
     else if (state.mode === "paused") state.mode = "playing";
   }
 
   // Quick controls (optional)
-  if (input.consumeRestart && input.consumeRestart()) restartLevel();
-  if (input.consumeNext && input.consumeNext()) nextLevel();
-
-  // tick timer only while playing
-  if (state.mode === "playing") state.timeMs += dt * 1000;
+  if (input.consumeRestart()) restartLevel();
+  if (input.consumeNext()) nextLevel();
 
   const session = levels.getSession();
   const world = session?.world;
@@ -157,28 +161,46 @@ function update(dt) {
   const contacts = session?.contacts;
   const gravity = session?.gravity;
 
-  // simulate while playing
+  // tick timer only while playing (real time, not physics time)
+  if (state.mode === "playing") state.timeMs += dt * 1000;
+
+  // simulate while playing (fixed timestep)
   if (state.mode === "playing" && world && contacts) {
-    // flip gravity
-    if (input.consumeFlip && input.consumeFlip()) {
+    // flip gravity (once per frame)
+    if (input.consumeFlip()) {
       gravity?.randomizeExcludingCurrent?.();
     }
 
-    world.step(dt, 8, 3);
-    contacts.flushDestroyQueue?.();
+    accumulator = Math.min(accumulator + dt, MAX_ACCUM);
 
-    if (contacts.won) state.mode = "won";
+    let steps = 0;
+    while (accumulator >= FIXED_STEP && steps < MAX_STEPS_PER_FRAME) {
+      world.step(FIXED_STEP, 8, 3);
+      contacts.flushDestroyQueue?.();
+
+      if (contacts.won) {
+        state.mode = "won";
+        break;
+      }
+
+      accumulator -= FIXED_STEP;
+      steps++;
+    }
+
+    // if we hit the cap, drop the remainder to keep the game responsive
+    if (steps >= MAX_STEPS_PER_FRAME) accumulator = 0;
   }
 
   // Win flow once
   if (state.mode === "won" && !state.winComputed && contacts) {
     state.winComputed = true;
 
+    const idx = levels.getIndex();
     const result = computeAndPersistWin({
       progress,
       levels: LEVELS,
-      levelIndex: levels.getIndex(),
-      levelId: LEVELS[levels.getIndex()].id,
+      levelIndex: idx,
+      levelId: LEVELS[idx].id,
       contacts,
       timeMs: state.timeMs,
     });
