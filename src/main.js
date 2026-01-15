@@ -11,6 +11,14 @@ import { getLevelConfig, computeScore, computeRating } from "./game/scoring.js";
 
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
+const overlay = document.getElementById("overlay");
+const overlayTitle = document.getElementById("overlay-title");
+const overlaySubtitle = document.getElementById("overlay-subtitle");
+const overlayStats = document.getElementById("overlay-stats");
+
+const btnResume = document.getElementById("btn-resume");
+const btnReplay = document.getElementById("btn-replay");
+const btnNext = document.getElementById("btn-next");
 
 const camera = createCamera();
 const input = createInput();
@@ -133,6 +141,33 @@ function restartLevel() {
 // Start
 loadLevel(0);
 
+btnResume.addEventListener("click", () => {
+  if (mode === "paused") togglePause();
+});
+
+btnReplay.addEventListener("click", () => {
+  restartLevel();
+});
+
+btnNext.addEventListener("click", () => {
+  nextLevel();
+});
+
+function showOverlay({ title, subtitle, stats, canResume, canNext }) {
+  overlayTitle.textContent = title;
+  overlaySubtitle.textContent = subtitle || "";
+  overlayStats.textContent = stats || "";
+
+  btnResume.disabled = !canResume;
+  btnNext.disabled = !canNext;
+
+  overlay.classList.remove("hidden");
+}
+
+function hideOverlay() {
+  overlay.classList.add("hidden");
+}
+
 function update(dt) {
   // Global controls
   if (input.consumePause()) togglePause();
@@ -213,6 +248,29 @@ function update(dt) {
     `Gravity ${gDir} — Stars ${stars} — ${goal}` +
     resultText +
     ` — ball (${p.x.toFixed(2)}, ${p.y.toFixed(2)})m — ${tmxInfo}`;
+
+  // Overlay UI
+  if (mode === "paused") {
+    showOverlay({
+      title: "Paused",
+      subtitle: "Press P or Esc to resume.",
+      stats: `Time ${formatTime(runTimeMs)} — Stars ${stars}`,
+      canResume: true,
+      canNext: false,
+    });
+  } else if (mode === "won") {
+    const rating = winResult ? `${winResult.rating}/3` : "";
+    const score = winResult ? `${winResult.score}` : "";
+    showOverlay({
+      title: "Level Complete",
+      subtitle: `Score ${score} — Rating ${rating}`,
+      stats: `Time ${formatTime(runTimeMs)} — Stars ${stars}`,
+      canResume: false,
+      canNext: levelIndex < LEVELS.length - 1,
+    });
+  } else {
+    hideOverlay();
+  }
 }
 
 function render(engine) {

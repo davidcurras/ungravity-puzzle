@@ -99,3 +99,77 @@ html, body {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 10, 20, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 20;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.panel {
+  width: min(520px, calc(100vw - 32px));
+  border-radius: 16px;
+  padding: 18px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(215, 226, 255, 0.18);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.35);
+  color: rgba(240, 246, 255, 0.92);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+.panel h2 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.panel p {
+  margin: 0 0 14px 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.panel-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panel-row--small {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.panel button {
+  appearance: none;
+  border: 1px solid rgba(215, 226, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(240, 246, 255, 0.92);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.panel button:active {
+  transform: translateY(1px);
+}
+
+.panel button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

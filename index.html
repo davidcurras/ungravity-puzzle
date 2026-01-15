@@ -44,6 +44,23 @@
       <span id="hud-status">Loading…</span>
     </div>
 
+    <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+      <div class="panel">
+        <h2 id="overlay-title">Paused</h2>
+        <p id="overlay-subtitle">Press P or Esc to resume.</p>
+
+        <div class="panel-row">
+          <button id="btn-resume" type="button">Resume</button>
+          <button id="btn-replay" type="button">Replay</button>
+          <button id="btn-next" type="button">Next</button>
+        </div>
+
+        <div class="panel-row panel-row--small">
+          <span id="overlay-stats"></span>
+        </div>
+      </div>
+    </div>
+
     <noscript>
       <div style="padding:16px;color:#fff;font-family:system-ui">
         This game requires JavaScript enabled.
