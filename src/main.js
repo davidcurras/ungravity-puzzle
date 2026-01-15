@@ -4,6 +4,7 @@ import { createCamera } from "./game/camera.js";
 import { pl, createWorld, createBall } from "./game/physics.js";
 import { renderWorldDebug } from "./game/renderDebug.js";
 import { createInput } from "./game/input.js";
+import { loadTMX } from "./game/tmx.js";
 
 const canvas = document.getElementById("game");
 const hudStatus = document.getElementById("hud-status");
@@ -13,6 +14,21 @@ const input = createInput();
 
 const world = createWorld();
 const ball = createBall(world, 160, 120, 18);
+
+let tmxInfo = "TMX: not loaded";
+
+loadTMX("./assets/maps/map101.tmx")
+  .then((map) => {
+    const objectLayers = map.layers.filter((l) => l.type === "objectgroup");
+    const objectsCount = objectLayers.reduce((acc, l) => acc + l.objects.length, 0);
+
+    tmxInfo = `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ${objectLayers.length} object layers — ${objectsCount} objects`;
+    console.log("TMX MAP:", map);
+  })
+  .catch((err) => {
+    tmxInfo = `TMX error — ${err.message}`;
+    console.error(err);
+  });
 
 // Static floor
 const floor = world.createBody({ position: pl.Vec2(0, 22) });
@@ -42,8 +58,8 @@ function update(dt) {
 
   const p = ball.getPosition();
   const gDir = gravityY > 0 ? "DOWN" : "UP";
-  hudStatus.textContent =
-    `Running — Gravity ${gDir} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms`;
+   hudStatus.textContent =
+    `Running — Gravity ${gDir} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms | ${tmxInfo}`;
 }
 
 function render(engine) {
