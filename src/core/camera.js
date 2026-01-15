@@ -1,4 +1,4 @@
-// src/game/camera.js
+// src/core/camera.js
 export function createCamera() {
   return {
     x: 0,

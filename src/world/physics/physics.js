@@ -1,4 +1,4 @@
-// src/game/physics.js
+// src/world/physics/physics.js
 import planck from "https://esm.sh/planck-js@0.3.0";
 
 export const pl = planck;

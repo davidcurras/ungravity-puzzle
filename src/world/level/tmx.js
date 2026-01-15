@@ -1,4 +1,4 @@
-// src/game/tmx.js
+// src/world/level/tmx.js
 
 export async function loadTMX(url) {
   const res = await fetch(url);

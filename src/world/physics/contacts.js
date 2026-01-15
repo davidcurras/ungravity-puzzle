@@ -1,4 +1,4 @@
-// src/game/contacts.js
+// src/world/physics/contacts.js
 
 const REQUIRED_RATIO = 0.3;
 

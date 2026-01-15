@@ -1,5 +1,5 @@
-// src/game/renderDebug.js
-import { mToPx, pl } from "./physics.js";
+// src/world/renderDebug.js
+import { mToPx, pl } from "./physics/physics.js";
 
 /**
  * Debug draw for Planck (Box2D) world:

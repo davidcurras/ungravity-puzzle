@@ -1,4 +1,4 @@
-// src/game/input.js
+// src/core/input.js
 export function createInput() {
   const state = {
     flipRequested: false,

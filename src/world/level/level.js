@@ -1,5 +1,5 @@
-// src/game/level.js
-import { pl, pxToM } from "./physics.js";
+// src/world/level/level.js
+import { pl, pxToM } from "../physics/physics.js";
 
 /**
  * Builds physics bodies from TMX object layers.

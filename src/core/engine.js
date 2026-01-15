@@ -1,4 +1,4 @@
-// src/game/engine.js
+// src/core/engine.js
 export function createEngine({ canvas, update, render }) {
   const ctx = canvas.getContext("2d", { alpha: false });
 
