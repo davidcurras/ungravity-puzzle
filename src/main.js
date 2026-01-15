@@ -14,62 +14,45 @@ const hudStatus = document.getElementById("hud-status");
 const camera = createCamera();
 const input = createInput();
 
-const world = createWorld();
-const ball = createBall(world, 160, 120, 18);
-const contacts = createContactSystem(world);
+// Levels (por ahora solo 1; después agregamos más)
+const LEVELS = [
+  { id: "map101", url: "./assets/maps/map101.tmx" },
+];
 
+let levelIndex = 0;
+
+// Runtime state
+let mode = "loading"; // "loading" | "playing" | "paused" | "won"
+let runTimeMs = 0;
 let tmxInfo = "TMX: not loaded";
 
-loadTMX("./assets/maps/map101.tmx")
-  .then((map) => {
-    const objectLayers = map.layers.filter((l) => l.type === "objectgroup");
-    const objectsCount = objectLayers.reduce((acc, l) => acc + l.objects.length, 0);
-
-    // Build physics level from TMX objects
-    const built = buildLevelFromTMX(world, map, ball);
-    contacts.reset(built.starsTotal);
-    contacts.won = false;
-    contacts.starsCollected = 0;
-    contacts.starsTotal = built.starsTotal;
-
-    tmxInfo = `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ${objectLayers.length} object layers — ${objectsCount} objects — built ${built.objectsCount}`;
-    console.log("TMX MAP:", map);
-  })
-  .catch((err) => {
-    tmxInfo = `TMX error — ${err.message}`;
-    console.error(err);
-  });
-
-
-/* // Static floor
-const floor = world.createBody({ position: pl.Vec2(0, 22) });
-floor.createFixture(pl.Box(40, 0.5), { friction: 0.4 });
-floor.setUserData({ type: "floor" });
-*/
+// World/session state (se recrea al cargar nivel)
+let world = null;
+let ball = null;
+let contacts = null;
 
 // Gravity state (4-way, random excluding current)
 const GRAVITY_MAG = 9.8;
-
 const GRAVITY_DIRS = [
-  { name: "DOWN",  v: () => pl.Vec2(0,  GRAVITY_MAG) },
-  { name: "UP",    v: () => pl.Vec2(0, -GRAVITY_MAG) },
-  { name: "RIGHT", v: () => pl.Vec2( GRAVITY_MAG, 0) },
-  { name: "LEFT",  v: () => pl.Vec2(-GRAVITY_MAG, 0) },
+  { name: "DOWN", v: () => pl.Vec2(0, GRAVITY_MAG) },
+  { name: "UP", v: () => pl.Vec2(0, -GRAVITY_MAG) },
+  { name: "RIGHT", v: () => pl.Vec2(GRAVITY_MAG, 0) },
+  { name: "LEFT", v: () => pl.Vec2(-GRAVITY_MAG, 0) },
 ];
 
-let gravityIndex = 0; // start DOWN by default
+let gravityIndex = 0; // start DOWN
 
 function applyGravity() {
+  if (!world) return;
   world.setGravity(GRAVITY_DIRS[gravityIndex].v());
 
-  // Wake up dynamic bodies so the change takes effect immediately
+  // wake dynamic bodies so change is immediate
   for (let b = world.getBodyList(); b; b = b.getNext()) {
     if (!b.isStatic()) b.setAwake(true);
   }
 }
 
 function randomizeGravityDirection() {
-  // pick any direction except the current one
   let next = gravityIndex;
   while (next === gravityIndex) {
     next = Math.floor(Math.random() * GRAVITY_DIRS.length);
@@ -78,29 +61,107 @@ function randomizeGravityDirection() {
   applyGravity();
 }
 
-// initial gravity
-applyGravity();
+function formatTime(ms) {
+  const totalSeconds = ms / 1000;
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  const tenths = Math.floor((ms % 1000) / 100);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${tenths}`;
+}
+
+function createSession() {
+  world = createWorld();
+  ball = createBall(world, 160, 120, 18);
+  contacts = createContactSystem(world);
+
+  applyGravity();
+}
+
+async function loadLevel(index) {
+  levelIndex = Math.max(0, Math.min(index, LEVELS.length - 1));
+  mode = "loading";
+  runTimeMs = 0;
+  tmxInfo = "TMX: loading…";
+
+  createSession();
+
+  try {
+    const level = LEVELS[levelIndex];
+    const map = await loadTMX(level.url);
+
+    const objectLayers = map.layers.filter((l) => l.type === "objectgroup");
+    const objectsCount = objectLayers.reduce((acc, l) => acc + l.objects.length, 0);
+
+    const built = buildLevelFromTMX(world, map, ball);
+    contacts.reset(built.starsTotal);
+
+    tmxInfo =
+      `TMX loaded — ${map.width}x${map.height} tiles @ ${map.tilewidth}x${map.tileheight}px — ` +
+      `${objectLayers.length} object layers — ${objectsCount} objects — built ${built.objectsCount}`;
+
+    mode = "playing";
+  } catch (err) {
+    console.error(err);
+    tmxInfo = `TMX error — ${err.message}`;
+    mode = "paused";
+  }
+}
+
+function togglePause() {
+  if (mode === "playing") mode = "paused";
+  else if (mode === "paused") mode = "playing";
+}
+
+function nextLevel() {
+  if (levelIndex < LEVELS.length - 1) {
+    loadLevel(levelIndex + 1);
+  } else {
+    // no-op por ahora
+    loadLevel(levelIndex);
+  }
+}
+
+function restartLevel() {
+  loadLevel(levelIndex);
+}
+
+// Start
+loadLevel(0);
 
 function update(dt) {
-  if (!contacts.won && input.consumeFlip()) {
-    randomizeGravityDirection(); // tu función 4-way random
+  // Global controls
+  if (input.consumePause()) togglePause();
+  if (input.consumeRestart()) restartLevel();
+  if (input.consumeNext()) nextLevel();
+
+  // Time only while playing
+  if (mode === "playing") runTimeMs += dt * 1000;
+
+  if (mode === "playing") {
+    if (!contacts.won && input.consumeFlip()) randomizeGravityDirection();
+
+    world.step(dt, 8, 3);
+    contacts.flushDestroyQueue();
+
+    if (contacts.won) {
+      mode = "won";
+    }
   }
 
-  world.step(dt, 8, 3);
-  contacts.flushDestroyQueue();
-
-  const p = ball.getPosition();
+  const p = ball?.getPosition?.() ?? pl.Vec2(0, 0);
   const gDir = GRAVITY_DIRS[gravityIndex].name;
-
-  const stars = `${contacts.starsCollected}/${contacts.starsTotal}`;
-  const winText = contacts.won ? " — ✅ WIN!" : "";
+  const stars = contacts ? `${contacts.starsCollected}/${contacts.starsTotal}` : "0/0";
+  const goal = contacts
+    ? `Goal ${contacts.isGoalEnabled() ? "ENABLED" : `LOCKED (${contacts.requiredStars} req)`}`
+    : "Goal LOCKED";
 
   hudStatus.textContent =
-    `Running — Gravity ${gDir} — stars ${stars}${winText} — ball y=${p.y.toFixed(2)}m — dt ${(dt * 1000).toFixed(1)}ms | ${tmxInfo}`;
+    `[${mode.toUpperCase()}] L${levelIndex + 1}/${LEVELS.length} — Time ${formatTime(runTimeMs)} — ` +
+    `Gravity ${gDir} — Stars ${stars} — ball (${p.x.toFixed(2)}, ${p.y.toFixed(2)})m — ${tmxInfo}`;
 }
 
 function render(engine) {
-  renderWorldDebug(engine, world, camera);
+  if (world) renderWorldDebug(engine, world, camera);
 }
 
 const engine = createEngine({ canvas, update, render });

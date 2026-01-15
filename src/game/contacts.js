@@ -1,12 +1,15 @@
 // src/game/contacts.js
 
+const REQUIRED_RATIO = 0.3;
+
 export function createContactSystem(world) {
-  const collectedBodies = new Set(); // track collected stars safely
+  const collectedBodies = new Set();
 
   const state = {
     won: false,
     starsCollected: 0,
     starsTotal: 0,
+    requiredStars: 0,
     destroyQueue: [],
   };
 
@@ -28,16 +31,17 @@ export function createContactSystem(world) {
     const otherData = isBallA ? b : a;
 
     if (otherData.type === "goal") {
-      state.won = true;
+      // ✅ gate: only win if enough stars
+      if (state.starsCollected >= state.requiredStars) {
+        state.won = true;
+      }
       return;
     }
 
     if (otherData.type === "star") {
-      // Avoid double collect (begin-contact can fire multiple times)
       if (collectedBodies.has(otherBody)) return;
       collectedBodies.add(otherBody);
 
-      // Optional: tag for debug
       try {
         const prev = otherBody.getUserData() || {};
         otherBody.setUserData({ ...prev, collected: true });
@@ -57,16 +61,18 @@ export function createContactSystem(world) {
       try {
         world.destroyBody(body);
       } catch {
-        // ignore if already destroyed
+        // ignore
       }
     }
   };
 
-  // Reset per level load
+  state.isGoalEnabled = () => state.starsCollected >= state.requiredStars;
+
   state.reset = (starsTotal = 0) => {
     state.won = false;
     state.starsCollected = 0;
     state.starsTotal = starsTotal;
+    state.requiredStars = Math.ceil(starsTotal * REQUIRED_RATIO);
     state.destroyQueue.length = 0;
     collectedBodies.clear();
   };
