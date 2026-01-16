@@ -15,3 +15,7 @@ Because the project loads assets via `fetch()`, you must run it from a local web
 ### Option A — Python (recommended)
 ```bash
 python3 -m http.server 8080
+
+## Play
+
+https://davidcurras.github.io/ungravity-puzzle
